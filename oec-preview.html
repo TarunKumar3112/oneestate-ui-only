@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OEC Ops — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ab:#D97706; --ab2:#F59E0B;
+  --bg:#080604; --tx:#F0EBE3;
+  --txd:rgba(240,235,227,0.5); --txf:rgba(240,235,227,0.22);
+  --gl:rgba(255,255,255,0.06); --gb:rgba(255,255,255,0.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#080604;color:var(--tx);font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;user-select:none}
+
+/* BACKGROUND */
+.bg{position:fixed;inset:0;z-index:0}
+.bg-g{position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 85% 65% at 12% 8%,#2e1608 0%,transparent 50%),
+    radial-gradient(ellipse 65% 55% at 88% 92%,#1c0f06 0%,transparent 50%),
+    radial-gradient(ellipse 45% 45% at 50% 50%,#130a03 0%,transparent 62%),
+    #080604;
+  animation:bgbr 13s ease-in-out infinite alternate}
+@keyframes bgbr{0%{filter:brightness(1)}50%{filter:brightness(1.1)}100%{filter:brightness(.96)}}
+.bg-vg{position:absolute;inset:0;background:radial-gradient(ellipse 100% 100% at 50% 50%,transparent 35%,rgba(3,2,1,.9) 100%);pointer-events:none}
+.bg-sc{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.022) 2px,rgba(0,0,0,.022) 4px);pointer-events:none}
+
+/* PARTICLES */
+#pcv{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+/* LAYOUT */
+.wrap{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.top{height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+  background:rgba(8,6,4,.8);backdrop-filter:blur(30px);border-bottom:1px solid rgba(217,119,6,.12);position:relative;z-index:20}
+.top::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(217,119,6,.3),rgba(245,158,11,.6),rgba(217,119,6,.3),transparent)}
+.brand{display:flex;align-items:center;gap:12px}
+.emb{position:relative;width:38px;height:38px;flex-shrink:0}
+.emb-r{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(217,119,6,.55);animation:es 9s linear infinite}
+.emb-r::before{content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--ab2);box-shadow:0 0 10px var(--ab2)}
+.emb-c{position:absolute;inset:6px;border-radius:50%;background:linear-gradient(135deg,#3d2008,#1a0c04);border:1px solid rgba(217,119,6,.3);display:flex;align-items:center;justify-content:center;font-size:13px}
+@keyframes es{to{transform:rotate(360deg)}}
+.bt{display:flex;flex-direction:column;gap:1px}
+.bn{font-family:'Michroma',monospace;font-size:12px;letter-spacing:3.5px;color:var(--tx)}
+.bs{font-size:9px;letter-spacing:2.5px;color:var(--ab);text-transform:uppercase;font-weight:500}
+.tmid{position:absolute;left:50%;transform:translateX(-50%)}
+.sok{display:flex;align-items:center;gap:7px;padding:5px 15px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);border-radius:20px;font-size:9.5px;letter-spacing:1.5px;color:rgba(34,197,94,.85);text-transform:uppercase;font-family:'Space Mono',monospace}
+.sdot{width:5px;height:5px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:spls 2s ease-in-out infinite}
+@keyframes spls{0%,100%{opacity:1}50%{opacity:.4}}
+.tr{display:flex;align-items:center;gap:14px}
+#clk{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--txd);letter-spacing:1px;min-width:78px;text-align:right}
+.rsw{display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:3px;gap:2px}
+.rb{padding:5px 14px;border-radius:18px;border:none;background:transparent;color:var(--txd);font-size:9.5px;font-family:'Outfit',sans-serif;font-weight:600;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:all .22s}
+.rb.on{background:linear-gradient(135deg,var(--ab),#7c3510);color:#0a0502;box-shadow:0 0 18px rgba(217,119,6,.45)}
+.rb:hover:not(.on){color:var(--tx);background:rgba(255,255,255,.07)}
+
+/* STAGE */
+.stage{flex:1;position:relative;overflow:hidden}
+
+/* ORBIT RINGS */
+.rings{position:absolute;inset:0;pointer-events:none;z-index:1}
+.ring{position:absolute;border-radius:50%}
+.r1{border:1px solid rgba(217,119,6,.18);animation:rp1 5s ease-in-out infinite alternate}
+.r2{border:1px solid rgba(217,119,6,.09);animation:rp2 7s ease-in-out infinite alternate}
+.r3{border:1px solid rgba(217,119,6,.05);animation:rp3 9.5s ease-in-out infinite alternate}
+@keyframes rp1{0%{box-shadow:0 0 30px rgba(217,119,6,.08),inset 0 0 30px rgba(217,119,6,.04);opacity:.55}
+               100%{box-shadow:0 0 80px rgba(217,119,6,.22),inset 0 0 60px rgba(217,119,6,.1);opacity:1}}
+@keyframes rp2{0%{opacity:.3}100%{opacity:.75}}
+@keyframes rp3{0%{opacity:.2}100%{opacity:.55}}
+
+/* CANVAS — on top of rings */
+#cv{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none}
+#cv.drag{cursor:grabbing}
+
+/* AMBIENT */
+#amb{position:absolute;inset:0;z-index:1;pointer-events:none;transition:background 1.2s ease}
+
+/* HINT */
+.hint{position:absolute;top:16px;left:50%;transform:translateX(-50%);font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,235,227,.28);display:flex;align-items:center;gap:10px;pointer-events:none;z-index:5;animation:hfa 4s ease-in-out infinite}
+@keyframes hfa{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* KEY HINT */
+.khint{position:absolute;bottom:208px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;pointer-events:none;z-index:5;opacity:.35}
+.key{padding:3px 8px;border:1px solid rgba(240,235,227,.22);border-radius:5px;font-family:'Space Mono',monospace;font-size:8.5px;color:rgba(240,235,227,.35)}
+
+/* SELECTION PANEL */
+.sp{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:20px;pointer-events:none;width:100%;max-width:640px;z-index:5}
+.sn{font-family:'Michroma',monospace;font-size:21px;letter-spacing:4px;text-transform:uppercase;text-align:center;opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .45s cubic-bezier(.34,1.56,.64,1)}
+.sn.in{opacity:1;transform:translateY(0)}
+.ss{font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--txd);text-align:center;opacity:0;transform:translateY(10px);transition:opacity .38s ease .06s,transform .4s cubic-bezier(.34,1.56,.64,1) .06s}
+.ss.in{opacity:1;transform:translateY(0)}
+.strow{display:flex;align-items:stretch;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;backdrop-filter:blur(24px);opacity:0;transform:translateY(20px) scale(.94);transition:opacity .42s ease .1s,transform .45s cubic-bezier(.34,1.56,.64,1) .1s}
+.strow.in{opacity:1;transform:translateY(0) scale(1)}
+.sc{padding:15px 28px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.sc:not(:last-child)::after{content:'';position:absolute;right:0;top:18%;height:64%;width:1px;background:rgba(255,255,255,.1)}
+.sv{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;line-height:1;transition:color .35s}
+.sl{font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--txd);white-space:nowrap}
+.sbtns{display:flex;gap:10px;pointer-events:all;opacity:0;transform:translateY(12px);transition:opacity .4s ease .16s,transform .42s cubic-bezier(.34,1.56,.64,1) .16s}
+.sbtns.in{opacity:1;transform:translateY(0)}
+.bp{padding:11px 26px;border-radius:12px;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:.4px;cursor:pointer;transition:all .18s;pointer-events:all}
+.bp:hover{transform:translateY(-2px);filter:brightness(1.12)}
+.bp:active{transform:scale(.97)}
+.bsec{padding:11px 18px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--txd);font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;transition:all .18s;pointer-events:all}
+.bsec:hover{background:rgba(255,255,255,.1);color:var(--tx);transform:translateY(-1px)}
+
+/* RESTRICTED */
+#rst{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);text-align:center;display:none;z-index:6}
+#rst h2{font-family:'Michroma',monospace;font-size:14px;letter-spacing:3px;color:var(--txd);margin-bottom:8px}
+#rst p{font-size:11px;color:var(--txf);letter-spacing:1px}
+
+/* TOAST */
+#toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-12px);background:rgba(18,10,5,.94);backdrop-filter:blur(24px);border:1px solid rgba(217,119,6,.32);border-radius:14px;padding:11px 22px;font-size:12.5px;color:var(--ab2);opacity:0;transition:all .38s cubic-bezier(.34,1.56,.64,1);pointer-events:none;z-index:999;white-space:nowrap}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* STATUS BAR */
+.sbar{height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:rgba(8,6,4,.85);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.05);font-family:'Space Mono',monospace;font-size:8.5px;letter-spacing:.8px;color:rgba(240,235,227,.3)}
+.sbl{display:flex;align-items:center;gap:6px}
+.sbl::before{content:'';width:4px;height:4px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-g"></div>
+  <div class="bg-vg"></div>
+  <div class="bg-sc"></div>
+</div>
+<canvas id="pcv"></canvas>
+
+<div class="wrap">
+  <!-- TOPBAR -->
+  <header class="top">
+    <div class="brand">
+      <div class="emb">
+        <div class="emb-r"></div>
+        <div class="emb-c">☕</div>
+      </div>
+      <div class="bt">
+        <div class="bn">One Estate Coffee</div>
+        <div class="bs">Operations Center</div>
+      </div>
+    </div>
+    <div class="tmid">
+      <div class="sok"><div class="sdot"></div>All systems nominal</div>
+    </div>
+    <div class="tr">
+      <div id="clk">00:00:00</div>
+      <div class="rsw">
+        <button class="rb on" data-role="admin">Admin</button>
+        <button class="rb" data-role="roaster">Roaster</button>
+        <button class="rb" data-role="viewer">Viewer</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- STAGE -->
+  <div class="stage" id="stage">
+    <div id="amb"></div>
+    <div class="rings" id="ringsEl">
+      <div class="ring r1" id="r1"></div>
+      <div class="ring r2" id="r2"></div>
+      <div class="ring r3" id="r3"></div>
+    </div>
+    <canvas id="cv"></canvas>
+
+    <div class="hint">◀ &nbsp; drag or swipe to navigate &nbsp; ▶</div>
+
+    <div class="khint">
+      <span class="key">←</span>
+      <span style="font-size:8px;color:rgba(240,235,227,.3);font-family:'Space Mono',monospace">navigate</span>
+      <span class="key">→</span>
+    </div>
+
+    <div id="rst">
+      <h2>ACCESS RESTRICTED</h2>
+      <p>No modules available for this role</p>
+    </div>
+
+    <div class="sp" id="sp">
+      <div class="sn" id="sn"></div>
+      <div class="ss" id="ss"></div>
+      <div class="strow" id="strow">
+        <div class="sc"><div class="sv" id="v0">—</div><div class="sl" id="l0">—</div></div>
+        <div class="sc"><div class="sv" id="v1">—</div><div class="sl" id="l1">—</div></div>
+        <div class="sc"><div class="sv" id="v2">—</div><div class="sl" id="l2">—</div></div>
+      </div>
+      <div class="sbtns" id="sbtns">
+        <button class="bp" id="bop" onclick="openMod()">Open Module ↗</button>
+        <button class="bsec" onclick="detailMod()">Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="sbar">
+    <div class="sbl">OEC OPS PLATFORM — PREVIEW v2.0.0</div>
+    <div id="dbar">—</div>
+    <div>60FPS · TENANT: OEC_MAIN</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================================================================
+   MODULE DATA
+================================================================ */
+const MODS = [
+  { id:'inventory', name:'Inventory',      sub:'Green Lots & Stock Overview',
+    col:'#22c55e', rgb:[34,197,94],   roles:['admin','roaster','viewer'],
+    st:[{v:'12',l:'Active Lots'},{v:'847',l:'KG Stock'},{v:'3',l:'Origins'}],
+    icon:'box' },
+  { id:'roast',     name:'Roast Sessions', sub:'Active & Scheduled Roasts',
+    col:'#ef4444', rgb:[239,68,68],   roles:['admin','roaster'],
+    st:[{v:'3',l:'Active Now'},{v:'7',l:'Scheduled'},{v:'24',l:'This Month'}],
+    icon:'flame' },
+  { id:'cupping',   name:'Cupping',        sub:'Scoring & Session History',
+    col:'#8b5cf6', rgb:[139,92,246],  roles:['admin','roaster','viewer'],
+    st:[{v:'8',l:'Sessions'},{v:'92.4',l:'Avg Score'},{v:'5',l:'Pending'}],
+    icon:'cup' },
+  { id:'alloc',     name:'Allocations',    sub:'Buyer Allocations & Requests',
+    col:'#D97706', rgb:[217,119,6],   roles:['admin','roaster','viewer'],
+    st:[{v:'18',l:'Allocations'},{v:'4',l:'Pending'},{v:'320',l:'KG Alloc.'}],
+    icon:'chart' },
+  { id:'labels',    name:'Labels',         sub:'QR Label Generation',
+    col:'#06b6d4', rgb:[6,182,212],   roles:['admin','roaster'],
+    st:[{v:'142',l:'Generated'},{v:'12',l:'Today'},{v:'99%',l:'Scan Rate'}],
+    icon:'qr' },
+  { id:'profiles',  name:'Roast Profiles', sub:'Saved Roast Curves',
+    col:'#f97316', rgb:[249,115,22],  roles:['admin','roaster'],
+    st:[{v:'24',l:'Profiles'},{v:'6',l:'Active'},{v:'92%',l:'Accuracy'}],
+    icon:'graph' },
+  { id:'contacts',  name:'Contacts',       sub:'Buyer & Partner Directory',
+    col:'#ec4899', rgb:[236,72,153],  roles:['admin'],
+    st:[{v:'56',l:'Contacts'},{v:'12',l:'Buyers'},{v:'8',l:'Partners'}],
+    icon:'people' },
+  { id:'journal',   name:'Journal',        sub:'Documentation & Entries',
+    col:'#84cc16', rgb:[132,204,22],  roles:['admin','roaster','viewer'],
+    st:[{v:'34',l:'Entries'},{v:'5',l:'This Week'},{v:'2',l:'Drafts'}],
+    icon:'book' }
+];
+
+/* ================================================================
+   STATE
+================================================================ */
+let role='admin', vis=[], selIdx=0;
+let angle=0, target=0, vel=0;
+let dragging=false, dragX0=0, dragA0=0, prevX=0, prevT=0, momV=0;
+let idle=0, W=0, H=0, cx=0, cy=0, orx=0, ory=0;
+let cv, ctx, pcv, pctx, lastTs=0;
+let pts=[];
+
+/* ================================================================
+   BOOT
+================================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  cv  = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  pcv  = document.getElementById('pcv');
+  pctx = pcv.getContext('2d');
+
+  // Date
+  document.getElementById('dbar').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'}).toUpperCase();
+
+  // Clock
+  const tick = () => {
+    document.getElementById('clk').textContent =
+      new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  };
+  tick(); setInterval(tick, 1000);
+
+  // Role buttons
+  document.querySelectorAll('.rb').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.rb').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      role = b.dataset.role;
+      switchRole();
+    });
+  });
+
+  // Init particles
+  for (let i = 0; i < 60; i++) pts.push(mkPt(true));
+
+  // Resize then start
+  window.addEventListener('resize', () => { doResize(); posRings(); });
+  doResize();
+
+  // Start role
+  switchRole(true);
+
+  // Show panel after short delay to allow CSS to settle
+  setTimeout(() => showPanel(selIdx), 80);
+
+  requestAnimationFrame(loop);
+});
+
+/* ================================================================
+   RESIZE
+================================================================ */
+function doResize() {
+  const s = document.getElementById('stage');
+  W = s.clientWidth; H = s.clientHeight;
+  cv.width = W; cv.height = H;
+  pcv.width = window.innerWidth; pcv.height = window.innerHeight;
+  cx = W / 2; cy = H / 2 - 85;
+  const m = Math.min(W, H);
+  orx = m * 0.30;
+  ory = m * 0.12;
+  posRings();
+}
+
+function posRings() {
+  const s = document.getElementById('stage');
+  const rect = s.getBoundingClientRect();
+  [[1,1.1,1.15],[2,1.25,1.32],[3,1.42,1.5]].forEach(([i,mx,my]) => {
+    const el = document.getElementById('r'+i);
+    const erx = orx*mx, ery = ory*my;
+    el.style.cssText = `width:${erx*2}px;height:${ery*2}px;left:${rect.left+cx-erx}px;top:${rect.top+cy-ery}px;`;
+  });
+}
+
+/* ================================================================
+   PARTICLES
+================================================================ */
+function mkPt(rand) {
+  return {
+    x: Math.random() * window.innerWidth,
+    y: rand ? Math.random() * window.innerHeight : window.innerHeight + 5,
+    r: 0.5 + Math.random() * 1.8,
+    sp: 0.2 + Math.random() * 0.55,
+    op: 0.12 + Math.random() * 0.35,
+    dr: (Math.random() - 0.5) * 0.28,
+    c: Math.random() > 0.5 ? [217,119,6] : [245,158,11]
+  };
+}
+function drawPts() {
+  pctx.clearRect(0, 0, pcv.width, pcv.height);
+  pts.forEach((p, i) => {
+    p.y -= p.sp; p.x += p.dr;
+    if (p.y < -8) pts[i] = mkPt(false);
+    pctx.beginPath();
+    pctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    pctx.fillStyle = `rgba(${p.c[0]},${p.c[1]},${p.c[2]},${p.op})`;
+    pctx.fill();
+  });
+}
+
+/* ================================================================
+   ROLE
+================================================================ */
+function switchRole(initial=false) {
+  vis = MODS.filter(m => m.roles.includes(role));
+  const rst = document.getElementById('rst');
+  const sp  = document.getElementById('sp');
+  if (!vis.length) {
+    rst.style.display = 'block'; sp.style.display = 'none';
+    return;
+  }
+  rst.style.display = 'none'; sp.style.display = 'flex';
+  selIdx = 0;
+  angle  = Math.PI / 2;
+  target = Math.PI / 2;
+  vel    = 0;
+  setTimeout(() => showPanel(0), initial ? 80 : 0);
+}
+
+/* ================================================================
+   EVENTS
+================================================================ */
+window.addEventListener('load', () => {
+  cv.addEventListener('mousedown',  pDown);
+  cv.addEventListener('mousemove',  pMove);
+  cv.addEventListener('mouseup',    pUp);
+  cv.addEventListener('mouseleave', pUp);
+  cv.addEventListener('touchstart', e=>{e.preventDefault();pDown(e.touches[0])},{ passive:false });
+  cv.addEventListener('touchmove',  e=>{e.preventDefault();pMove(e.touches[0])},{ passive:false });
+  cv.addEventListener('touchend',   e=>pUp(e.changedTouches[0]));
+  cv.addEventListener('click', onClick);
+  document.addEventListener('keydown', e => {
+    if (e.key==='ArrowLeft')  rotBy(1);
+    if (e.key==='ArrowRight') rotBy(-1);
+    if (e.key==='Enter')      openMod();
+  });
+});
+
+function pDown(e) {
+  dragging=true; dragX0=e.clientX; dragA0=angle;
+  prevX=e.clientX; prevT=Date.now(); momV=0; idle=0;
+  cv.classList.add('drag');
+}
+function pMove(e) {
+  if (!dragging) return;
+  const dx = e.clientX-prevX, dt = Date.now()-prevT;
+  if (dt > 0) momV = dx/dt;
+  prevX=e.clientX; prevT=Date.now();
+  angle = dragA0 + (e.clientX-dragX0)*0.006;
+  target = angle;
+}
+function pUp() {
+  if (!dragging) return;
+  dragging=false; cv.classList.remove('drag');
+  vel = momV * 0.013;
+  snapNearest();
+}
+function onClick(e) {
+  if (Math.abs(e.clientX - dragX0) > 8) return;
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const n=vis.length, step=(Math.PI*2)/n;
+  for (let i=0; i<n; i++) {
+    const a = angle + i*step;
+    const ix = cx + orx*Math.cos(a), iy = cy + ory*Math.sin(a);
+    if (Math.hypot(mx-ix, my-iy) < 60) { rotToIdx(i); return; }
+  }
+}
+function rotBy(dir) {
+  const n = vis.length; if (!n) return;
+  selIdx = ((selIdx+dir)+n)%n;
+  target = Math.PI/2 - selIdx*(Math.PI*2/n);
+  vel = 0; showPanel(selIdx);
+}
+function rotToIdx(i) {
+  selIdx=i; target = Math.PI/2 - i*(Math.PI*2/vis.length); vel=0; showPanel(i);
+}
+function snapNearest() {
+  const n=vis.length; if (!n) return;
+  const step = (Math.PI*2)/n;
+  const rawI = (Math.PI/2 - angle)/step;
+  const si   = Math.round(rawI);
+  selIdx = ((si%n)+n)%n;
+  target = Math.PI/2 - si*step;
+  showPanel(selIdx);
+}
+
+/* ================================================================
+   PANEL
+================================================================ */
+let panT = null;
+function showPanel(idx) {
+  const m = vis[idx]; if (!m) return;
+  ['sn','ss','strow','sbtns'].forEach(id => document.getElementById(id).classList.remove('in'));
+  clearTimeout(panT);
+  panT = setTimeout(() => {
+    const sn=document.getElementById('sn'), ss=document.getElementById('ss');
+    sn.textContent = m.name; sn.style.color = m.col;
+    ss.textContent = m.sub;
+    m.st.forEach((s,i) => {
+      document.getElementById('v'+i).textContent = s.v;
+      document.getElementById('v'+i).style.color  = m.col;
+      document.getElementById('l'+i).textContent  = s.l;
+    });
+    const bp = document.getElementById('bop');
+    bp.textContent = 'Open ' + m.name + ' ↗';
+    bp.style.background = `linear-gradient(135deg,${m.col},${dimC(m.col)})`;
+    const lum = (m.rgb[0]*.299 + m.rgb[1]*.587 + m.rgb[2]*.114)/255;
+    bp.style.color = lum > .58 ? '#0a0502' : '#fff';
+    bp.style.boxShadow = `0 0 30px rgba(${m.rgb.join(',')},0.5)`;
+    document.getElementById('amb').style.background =
+      `radial-gradient(ellipse 65% 50% at 50% 65%,rgba(${m.rgb.join(',')},0.06) 0%,transparent 72%)`;
+    sn.classList.add('in');
+    setTimeout(()=>document.getElementById('ss').classList.add('in'),50);
+    setTimeout(()=>document.getElementById('strow').classList.add('in'),100);
+    setTimeout(()=>document.getElementById('sbtns').classList.add('in'),150);
+  }, 160);
+}
+function dimC(hex) {
+  const n = parseInt(hex.replace('#',''),16);
+  return `rgb(${Math.max(0,((n>>16)&255)-60)},${Math.max(0,((n>>8)&255)-60)},${Math.max(0,(n&255)-60)})`;
+}
+
+/* ================================================================
+   ACTIONS
+================================================================ */
+function openMod()   { toast(`↗  "${vis[selIdx]?.name}" — Routing disabled in preview mode`); }
+function detailMod() { toast(`ℹ  ${vis[selIdx]?.name} · ${vis[selIdx]?.sub}`); }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('on'), 3500);
+}
+
+/* ================================================================
+   MAIN LOOP
+================================================================ */
+function loop(ts) {
+  const dt = Math.min((ts - lastTs) / 16.67, 3); lastTs = ts;
+  if (!dragging) {
+    idle += dt * 0.018;
+    const d = target - angle;
+    vel = vel * 0.75 + d * 0.16;
+    angle += vel * dt;
+    // Track selection change during momentum
+    if (vis.length && Math.abs(vel) > 0.0015) {
+      const step = (Math.PI*2) / vis.length;
+      const rawI = (Math.PI/2 - angle) / step;
+      const ni   = ((Math.round(rawI) % vis.length) + vis.length) % vis.length;
+      if (ni !== selIdx) { selIdx = ni; showPanel(ni); }
+    }
+  }
+  drawPts();
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ================================================================
+   RENDER
+================================================================ */
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  const n = vis.length; if (!n) return;
+  const step = (Math.PI*2) / n;
+  const bob  = Math.sin(idle) * 7;
+
+  const items = vis.map((m, i) => {
+    const a = angle + i * step;
+    const x = cx + orx * Math.cos(a);
+    const y = cy + ory * Math.sin(a) + bob;
+    const depth = (Math.sin(a) + 1) / 2;
+    return { m, x, y, depth, sel: i===selIdx, i };
+  });
+  items.sort((a,b) => a.depth - b.depth);
+
+  drawOrbit(bob);
+  drawGlow(bob);
+  items.forEach(it => drawCard(it));
+}
+
+function drawOrbit(bob) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(217,119,6,0.12)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 10]);
+  ctx.lineDashOffset = -(idle * 25);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+bob, orx, ory, 0, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawGlow(bob) {
+  const m = vis[selIdx]; if (!m) return;
+  const [r,g,b] = m.rgb;
+  const gr = ctx.createRadialGradient(cx, cy+bob, 0, cx, cy+bob, orx*0.6);
+  gr.addColorStop(0, `rgba(${r},${g},${b},0.06)`);
+  gr.addColorStop(1, 'transparent');
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(cx, cy+bob, orx*0.6, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawCard(it) {
+  const { m, x, y, depth, sel } = it;
+  const base = Math.min(W, H) * 0.095;
+  const ds   = 0.44 + depth * 0.56;
+  const ss   = sel ? 1.22 : 1.0;
+  const sz   = base * ds * ss;
+  const al   = 0.3 + depth * 0.7;
+  const [r,g,b] = m.rgb;
+
+  ctx.save();
+  ctx.globalAlpha = al;
+  ctx.translate(x, y);
+
+  // Glow halos for selected
+  if (sel) {
+    const halos = [[sz*2.2, 0.12], [sz*1.6, 0.18], [sz*1.1, 0.22]];
+    halos.forEach(([hr, ha]) => {
+      const hg = ctx.createRadialGradient(0,0,sz*0.3,0,0,hr);
+      hg.addColorStop(0, `rgba(${r},${g},${b},${ha})`);
+      hg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.globalAlpha = al;
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0,0,hr,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  ctx.globalAlpha = al;
+  ctx.shadowColor = sel ? `rgba(${r},${g},${b},0.7)` : 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur  = sel ? 35 : 16;
+
+  // Card body
+  const h = sz/2, rad = sz*0.26;
+  rrect(ctx, -h,-h, sz,sz, rad);
+
+  const bg = ctx.createLinearGradient(-h,-h, h,h);
+  if (sel) {
+    bg.addColorStop(0, `rgba(${r},${g},${b},0.38)`);
+    bg.addColorStop(0.5,`rgba(${r},${g},${b},0.20)`);
+    bg.addColorStop(1,  `rgba(${r},${g},${b},0.08)`);
+  } else {
+    bg.addColorStop(0, 'rgba(255,255,255,0.14)');
+    bg.addColorStop(1, 'rgba(255,255,255,0.04)');
+  }
+  ctx.fillStyle = bg;
+  ctx.fill();
+
+  // Border
+  ctx.shadowBlur = 0;
+  rrect(ctx, -h,-h, sz,sz, rad);
+  ctx.strokeStyle = sel
+    ? `rgba(${r},${g},${b},0.75)`
+    : 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = sel ? 1.8 : 1;
+  ctx.stroke();
+
+  // Inner shimmer
+  rrect(ctx, -h+1,-h+1, sz-2, sz*0.4, rad);
+  const sh = ctx.createLinearGradient(-h,-h, h,0);
+  sh.addColorStop(0, 'rgba(255,255,255,0.12)');
+  sh.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sh; ctx.fill();
+
+  // Icon
+  ctx.globalAlpha = al * (sel ? 1 : 0.8);
+  drawIcon(ctx, m, sz);
+
+  // Label
+  if (depth > 0.48) {
+    const la = Math.pow((depth-0.48)/0.52, 1.5);
+    ctx.globalAlpha = al * la * (sel ? 1 : 0.75);
+    ctx.fillStyle   = sel ? m.col : 'rgba(240,235,227,0.75)';
+    const fs = Math.max(8, Math.round(9 * ds * ss));
+    ctx.font = `${sel?'700':'500'} ${fs}px Outfit,sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor  = sel ? `rgba(${r},${g},${b},0.6)` : 'transparent';
+    ctx.shadowBlur   = sel ? 10 : 0;
+    ctx.fillText(m.name, 0, h + 10*ds);
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.restore();
+}
+
+/* ================================================================
+   ICON DRAWING (canvas primitives — reliable cross-browser)
+================================================================ */
+function drawIcon(ctx, m, sz) {
+  const s  = sz * 0.22;   // icon half-size
+  const lw = Math.max(1.2, sz * 0.022);
+  ctx.save();
+  ctx.strokeStyle = m.col;
+  ctx.fillStyle   = m.col;
+  ctx.lineWidth   = lw;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.shadowColor = m.col;
+  ctx.shadowBlur  = 8;
+
+  switch (m.icon) {
+    case 'box':      drawBox(ctx, s); break;
+    case 'flame':    drawFlame(ctx, s); break;
+    case 'cup':      drawCup(ctx, s); break;
+    case 'chart':    drawChart(ctx, s); break;
+    case 'qr':       drawQR(ctx, s); break;
+    case 'graph':    drawGraph(ctx, s); break;
+    case 'people':   drawPeople(ctx, s); break;
+    case 'book':     drawBook(ctx, s); break;
+  }
+  ctx.restore();
+}
+
+function drawBox(ctx, s) {
+  // 3D cube outline
+  const h = s*0.55;
+  ctx.beginPath();
+  ctx.moveTo(0, -h); ctx.lineTo(h*0.8, -h*0.4);
+  ctx.lineTo(h*0.8, h*0.4); ctx.lineTo(0, h);
+  ctx.lineTo(-h*0.8, h*0.4); ctx.lineTo(-h*0.8, -h*0.4);
+  ctx.closePath(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0,-h); ctx.lineTo(0, 0);
+  ctx.moveTo(h*0.8,-h*0.4); ctx.lineTo(0, 0);
+  ctx.moveTo(-h*0.8,-h*0.4); ctx.lineTo(0, 0);
+  ctx.stroke();
+}
+function drawFlame(ctx, s) {
+  ctx.beginPath();
+  ctx.moveTo(0, s*0.85);
+  ctx.bezierCurveTo(s*0.8, s*0.4, s*0.9, -s*0.1, s*0.3, -s*0.5);
+  ctx.bezierCurveTo(s*0.5, 0, s*0.1, s*0.15, 0, -s*0.85);
+  ctx.bezierCurveTo(-s*0.1, s*0.15, -s*0.5, 0, -s*0.3, -s*0.5);
+  ctx.bezierCurveTo(-s*0.9, -s*0.1, -s*0.8, s*0.4, 0, s*0.85);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, s*0.2, s*0.22, 0, Math.PI*2);
+  ctx.stroke();
+}
+function drawCup(ctx, s) {
+  ctx.beginPath();
+  ctx.moveTo(-s*0.65, -s*0.5);
+  ctx.lineTo(-s*0.5, s*0.6);
+  ctx.lineTo(s*0.5, s*0.6);
+  ctx.lineTo(s*0.65, -s*0.5);
+  ctx.closePath(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(s*0.65, -s*0.1);
+  ctx.bezierCurveTo(s*1.1, -s*0.1, s*1.1, s*0.35, s*0.65, s*0.35);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.65, -s*0.5);
+  ctx.lineTo(s*0.65, -s*0.5);
+  ctx.stroke();
+}
+function drawChart(ctx, s) {
+  // Bar chart
+  const bars = [[-s*0.5,s*0.4],[- s*0.16,s*0],[s*0.16,s*0.6],[s*0.5,s*0.2]];
+  bars.forEach(([bx, th]) => {
+    ctx.beginPath();
+    ctx.rect(bx-s*0.14, th-s*0.9, s*0.28, s*0.9-th+s*0.9);
+    ctx.stroke();
+  });
+  ctx.beginPath();
+  ctx.moveTo(-s*0.75, s*0.85); ctx.lineTo(s*0.75, s*0.85);
+  ctx.stroke();
+}
+function drawQR(ctx, s) {
+  // Simplified QR pattern
+  const gs = s*0.32;
+  [[-1,-1],[1,-1],[- 1,1]].forEach(([gx,gy]) => {
+    ctx.beginPath();
+    ctx.rect(gx*s*0.5-gs/2, gy*s*0.5-gs/2, gs,gs);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(gx*s*0.5-gs/4, gy*s*0.5-gs/4, gs/2,gs/2);
+    ctx.fill();
+  });
+  ctx.beginPath();
+  ctx.rect(s*0.2, s*0.2, gs*0.6, gs*0.6); ctx.stroke();
+  ctx.beginPath();
+  ctx.rect(-s*0.15, s*0.2, gs*0.6, gs*0.6); ctx.stroke();
+  ctx.beginPath();
+  ctx.rect(s*0.2, -s*0.15, gs*0.6, gs*0.6); ctx.stroke();
+}
+function drawGraph(ctx, s) {
+  ctx.beginPath();
+  ctx.moveTo(-s*0.8, s*0.4);
+  ctx.lineTo(-s*0.4, 0);
+  ctx.lineTo(0, s*0.15);
+  ctx.lineTo(s*0.4, -s*0.55);
+  ctx.lineTo(s*0.8, -s*0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(s*0.8, -s*0.7, s*0.1, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.8, s*0.8); ctx.lineTo(-s*0.8, -s*0.8);
+  ctx.moveTo(-s*0.8, s*0.8); ctx.lineTo(s*0.8, s*0.8);
+  ctx.stroke();
+}
+function drawPeople(ctx, s) {
+  // Two person silhouettes
+  ctx.beginPath();
+  ctx.arc(-s*0.25, -s*0.45, s*0.28, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.8, s*0.85);
+  ctx.quadraticCurveTo(-s*0.8, s*0.15, -s*0.25, s*0.15);
+  ctx.quadraticCurveTo(s*0.3, s*0.15, s*0.3, s*0.85);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(s*0.4, -s*0.55, s*0.22, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(s*0.05, s*0.85);
+  ctx.quadraticCurveTo(s*0.05, s*0.25, s*0.4, s*0.25);
+  ctx.quadraticCurveTo(s*0.8, s*0.25, s*0.8, s*0.85);
+  ctx.stroke();
+}
+function drawBook(ctx, s) {
+  ctx.beginPath();
+  ctx.rect(-s*0.8, -s*0.85, s*0.75, s*1.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.rect(s*0.05, -s*0.85, s*0.75, s*1.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.05, -s*0.85); ctx.lineTo(-s*0.05, s*0.85);
+  ctx.stroke();
+  [0.3,0.55,0.75].forEach(yf => {
+    ctx.beginPath();
+    ctx.moveTo(-s*0.7, -s*0.85+s*1.7*yf);
+    ctx.lineTo(-s*0.15, -s*0.85+s*1.7*yf);
+    ctx.moveTo(s*0.15, -s*0.85+s*1.7*yf);
+    ctx.lineTo(s*0.7, -s*0.85+s*1.7*yf);
+    ctx.stroke();
+  });
+}
+
+/* ================================================================
+   UTILS
+================================================================ */
+function rrect(ctx, x,y,w,h,r) {
+  const mr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+mr,y);
+  ctx.arcTo(x+w,y, x+w,y+h, mr);
+  ctx.arcTo(x+w,y+h, x,y+h, mr);
+  ctx.arcTo(x,y+h, x,y, mr);
+  ctx.arcTo(x,y, x+w,y, mr);
+  ctx.closePath();
+}
+</script>
+</body>
+</html>
